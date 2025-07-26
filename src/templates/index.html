@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raspberry Pi Monitor - Static Version</title>
+    <title>Raspberry Pi Monitor</title>
     <style>
         * {
             margin: 0;
@@ -16,7 +16,7 @@
             color: #333;
         }
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -24,6 +24,65 @@
             text-align: center;
             margin-bottom: 30px;
             color: #2c3e50;
+        }
+        .video-section {
+            text-align: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        #video-container {
+            position: relative;
+            display: inline-block;
+        }
+        #video-stream {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            display: none;
+        }
+        #video-placeholder {
+            width: 640px;
+            height: 480px;
+            background: #e8e8e8;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 16px;
+        }
+        #video-status {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            padding: 12px 24px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn-video {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-video:hover:not(:disabled) {
+            background-color: #2980b9;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         .info-section {
             background: white;
@@ -40,6 +99,17 @@
             border: 1px solid #27ae60;
             border-radius: 6px;
             font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .loading {
+            color: #f39c12;
+            background-color: #fef9e7;
+            border-color: #f39c12;
+        }
+        .error {
+            color: #e74c3c;
+            background-color: #fdf2f2;
+            border-color: #e74c3c;
         }
     </style>
 </head>
@@ -47,31 +117,122 @@
     <div class="container">
         <h1>Raspberry Pi Monitor</h1>
         
+        <div class="status" id="page-status">
+            ✅ ページ読み込み完了 - <span id="current-time"></span>
+        </div>
+        
+        <div class="video-section">
+            <h3>ライブ映像</h3>
+            <div id="video-container">
+                <div id="video-placeholder">
+                    📹 動画を読み込むには下のボタンを押してください
+                </div>
+                <img id="video-stream" alt="Live Stream">
+            </div>
+            <div id="video-status">動画未読み込み</div>
+        </div>
+        
+        <div class="controls">
+            <button id="start-video-btn" class="btn btn-video">動画配信開始</button>
+            <button id="stop-video-btn" class="btn btn-video" disabled>動画配信停止</button>
+        </div>
+        
         <div class="info-section">
             <h3>システム情報</h3>
-            <p><strong>状態:</strong> アプリケーション正常動作中</p>
-            <p><strong>アクセス時刻:</strong> <span id="current-time"></span></p>
+            <p><strong>状態:</strong> <span id="system-status">正常動作中</span></p>
+            <p><strong>アクセス時刻:</strong> <span id="access-time"></span></p>
             <p><strong>サーバー:</strong> Raspberry Pi</p>
-        </div>
-        
-        <div class="status">
-            ✅ 静的ページ表示テスト - 接続成功
-        </div>
-        
-        <div class="info-section">
-            <h3>動作確認</h3>
-            <p>このページが表示されている場合、Raspberry Piのウェブサーバーは正常に動作しています。</p>
-            <p>ページの再読み込みを行って、安定してアクセスできることを確認してください。</p>
         </div>
     </div>
     
     <script>
-        document.getElementById('current-time').textContent = new Date().toLocaleString('ja-JP');
+        let videoLoaded = false;
+        let videoInterval = null;
         
-        // 5秒ごとに時刻を更新
-        setInterval(function() {
+        // 時刻表示の更新
+        function updateTime() {
             document.getElementById('current-time').textContent = new Date().toLocaleString('ja-JP');
-        }, 5000);
+            document.getElementById('access-time').textContent = new Date().toLocaleString('ja-JP');
+        }
+        
+        // 初期時刻設定と定期更新
+        updateTime();
+        setInterval(updateTime, 5000);
+        
+        // 動画配信開始
+        document.getElementById('start-video-btn').addEventListener('click', async function() {
+            const startBtn = document.getElementById('start-video-btn');
+            const stopBtn = document.getElementById('stop-video-btn');
+            const videoStream = document.getElementById('video-stream');
+            const videoPlaceholder = document.getElementById('video-placeholder');
+            const videoStatus = document.getElementById('video-status');
+            
+            startBtn.disabled = true;
+            videoStatus.textContent = '動画を読み込み中...';
+            videoStatus.className = 'loading';
+            
+            try {
+                // 動画フィードのURLにタイムスタンプを追加してキャッシュを回避
+                const videoUrl = '/video_feed?t=' + Date.now();
+                
+                // 画像の読み込み完了を待つ
+                videoStream.onload = function() {
+                    videoPlaceholder.style.display = 'none';
+                    videoStream.style.display = 'block';
+                    videoStatus.textContent = '✅ 動画配信中';
+                    videoStatus.className = '';
+                    stopBtn.disabled = false;
+                    videoLoaded = true;
+                };
+                
+                videoStream.onerror = function() {
+                    videoStatus.textContent = '❌ 動画読み込みエラー';
+                    videoStatus.className = 'error';
+                    startBtn.disabled = false;
+                };
+                
+                // 非同期で動画ストリームを開始
+                videoStream.src = videoUrl;
+                
+            } catch (error) {
+                videoStatus.textContent = '❌ 接続エラー: ' + error.message;
+                videoStatus.className = 'error';
+                startBtn.disabled = false;
+            }
+        });
+        
+        // 動画配信停止
+        document.getElementById('stop-video-btn').addEventListener('click', function() {
+            const startBtn = document.getElementById('start-video-btn');
+            const stopBtn = document.getElementById('stop-video-btn');
+            const videoStream = document.getElementById('video-stream');
+            const videoPlaceholder = document.getElementById('video-placeholder');
+            const videoStatus = document.getElementById('video-status');
+            
+            videoStream.src = '';
+            videoStream.style.display = 'none';
+            videoPlaceholder.style.display = 'flex';
+            videoPlaceholder.textContent = '📹 動画が停止されました';
+            
+            videoStatus.textContent = '動画配信停止';
+            videoStatus.className = '';
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            videoLoaded = false;
+        });
+        
+        // ページの可視性が変わった時の処理
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && videoLoaded) {
+                // ページが非表示になったら動画を一時停止
+                document.getElementById('video-stream').src = '';
+            } else if (!document.hidden && videoLoaded) {
+                // ページが表示されたら動画を再開
+                const videoUrl = '/video_feed?t=' + Date.now();
+                document.getElementById('video-stream').src = videoUrl;
+            }
+        });
     </script>
 </body>
 </html>
