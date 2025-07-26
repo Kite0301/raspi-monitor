@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 import base64
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='src/templates', static_folder='src/static')
 app.config['SECRET_KEY'] = 'raspi-monitor-secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
