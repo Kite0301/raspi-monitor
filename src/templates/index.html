@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Raspberry Pi Monitor</h1>
+        
+        <div class="video-section">
+            <img id="video-stream" src="{{ url_for('video_feed') }}" alt="Live Stream">
+        </div>
+        
+        <div class="controls">
+            <button id="record-btn" class="btn btn-record">録画開始</button>
+            <button id="stop-btn" class="btn btn-stop" disabled>録画停止</button>
+        </div>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="recordings">
+            <h3>録画一覧</h3>
+            <div id="recordings-list"></div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

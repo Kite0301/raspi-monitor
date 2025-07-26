@@ -1,0 +1,8 @@
+flask==3.0.3
+flask-socketio==5.3.6
+opencv-python==4.10.0.84
+python-socketio==5.11.4
+gunicorn==23.0.0
+eventlet==0.36.1
+numpy==1.24.3
+pillow==10.4.0
