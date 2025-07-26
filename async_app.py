@@ -144,8 +144,24 @@ def index():
 @app.route('/video_feed')
 def video_feed():
     """Video streaming endpoint - only loads when requested"""
-    return Response(generate_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    print("Video feed endpoint accessed")
+    try:
+        return Response(generate_frames(),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
+    except Exception as e:
+        print(f"Error in video_feed: {e}")
+        return f"Video feed error: {e}", 500
+
+@app.route('/test_camera')
+def test_camera():
+    """Test camera initialization without streaming"""
+    try:
+        if camera_manager.initialize_camera():
+            return {"status": "success", "message": "Camera initialized successfully"}
+        else:
+            return {"status": "error", "message": "Camera initialization failed"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.route('/camera_status')
 def camera_status():
