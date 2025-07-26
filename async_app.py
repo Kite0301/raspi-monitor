@@ -29,15 +29,35 @@ class OptimizedCameraManager:
             try:
                 print("Initializing camera...")
                 self.camera = cv2.VideoCapture(0)
+                
+                # Check if camera opened successfully
+                if not self.camera.isOpened():
+                    print("Failed to open camera device")
+                    self.camera.release()
+                    self.camera = None
+                    return False
+                
                 # Optimize settings for Raspberry Pi
                 self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 480)  # Reduced resolution
                 self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
                 self.camera.set(cv2.CAP_PROP_FPS, 10)  # Lower FPS
                 self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer
-                print("Camera initialized successfully")
+                
+                # Test frame capture
+                ret, frame = self.camera.read()
+                if not ret:
+                    print("Failed to capture test frame")
+                    self.camera.release()
+                    self.camera = None
+                    return False
+                    
+                print(f"Camera initialized successfully - Resolution: {frame.shape}")
                 return True
             except Exception as e:
                 print(f"Camera initialization failed: {e}")
+                if self.camera:
+                    self.camera.release()
+                    self.camera = None
                 return False
         return True
     
@@ -88,20 +108,32 @@ camera_manager = OptimizedCameraManager()
 def generate_frames():
     """Generate video frames for streaming"""
     camera_manager.add_client()
+    print("Starting video stream generation")
+    
     try:
+        frame_count = 0
         while True:
             frame_bytes = camera_manager.get_frame()
             if frame_bytes:
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                frame_count += 1
+                if frame_count % 50 == 0:  # Log every 50 frames
+                    print(f"Streamed {frame_count} frames")
             else:
-                # Send placeholder frame if camera fails
+                print("Failed to get frame from camera")
+                # Send error frame
+                error_msg = b'Camera initialization failed or unavailable'
                 yield (b'--frame\r\n'
-                       b'Content-Type: text/plain\r\n\r\n' + b'Camera unavailable\r\n')
+                       b'Content-Type: text/plain\r\n\r\n' + error_msg + b'\r\n')
+                time.sleep(1)  # Wait longer on error
             time.sleep(0.1)  # 10 FPS
     except GeneratorExit:
-        pass
+        print("Video stream ended by client")
+    except Exception as e:
+        print(f"Error in video stream: {e}")
     finally:
+        print("Cleaning up video stream resources")
         camera_manager.remove_client()
 
 @app.route('/')
