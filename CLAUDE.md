@@ -4,66 +4,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Raspberry Pi monitoring system that provides live video streaming and recording capabilities through a web interface. The system is designed to work as a baby monitor with webcam integration.
+Raspberry Pi Monitor v1 is a real-time video and audio streaming system designed for monitoring purposes. It provides browser-based access to live camera feeds with audio support.
 
 ## Architecture
 
-- **Backend**: Flask web application with SocketIO for real-time communication
-- **Frontend**: Single-page HTML application with vanilla JavaScript
-- **Camera Integration**: OpenCV for video capture and processing
-- **File Structure**:
-  - `app.py` - Main Flask application with camera management
-  - `src/templates/index.html` - Web interface (Japanese UI)
-  - `src/static/js/main.js` - Client-side JavaScript for controls and SocketIO
-  - `src/static/css/style.css` - Responsive styling
-  - `recordings/` - Directory for video recordings (auto-created)
+- **Backend**: Flask with Flask-SocketIO for real-time communication
+- **Video Streaming**: OpenCV for camera capture, JPEG encoding via HTTP multipart
+- **Audio Streaming**: PyAudio for audio capture, WebSocket transmission via Socket.IO
+- **Frontend**: HTML5 with Web Audio API for audio playback
 
-## Key Components
+## Main Application (audio_video_app.py)
 
-### CameraManager Class (`app.py:14-60`)
-- Handles camera initialization, frame capture, and video recording
-- Thread-safe operations with locks
-- Supports start/stop recording with timestamped filenames
+### Key Components:
+- **Video Stream**: 640x480 @ 15 FPS via `/video_feed` endpoint
+- **Audio Stream**: 16kHz mono via WebSocket events
+- **Audio Control**: Client-initiated start/stop for bandwidth efficiency
 
-### Real-time Communication
-- Uses Flask-SocketIO for live video streaming
-- WebSocket events: `start_recording`, `stop_recording`
-- REST API endpoint `/api/recordings` for file listing
+### Configuration:
+```python
+# Audio settings
+CHUNK = 1024
+FORMAT = pyaudio.paInt16
+CHANNELS = 1
+RATE = 16000
+AUDIO_DEVICE_INDEX = 1  # USB camera microphone
 
-### Frontend Features
-- Live video stream display
-- Recording controls (start/stop buttons)
-- Real-time status updates
-- Recordings list with download links
-- Japanese language interface
+# Video settings
+VIDEO_WIDTH = 640
+VIDEO_HEIGHT = 480
+VIDEO_FPS = 15
+```
 
 ## Development Commands
 
 ### Running the Application
 ```bash
-python app.py
+source venv/bin/activate
+python audio_video_app.py
 ```
-- Starts Flask development server on `0.0.0.0:5000`
-- Creates `recordings/` directory if it doesn't exist
-- Debug mode enabled by default
-
-### Installing Dependencies
-```bash
-pip install -r requirements.txt
-```
+- Runs on `0.0.0.0:5000`
+- Accessible from any device on the network
 
 ### Key Dependencies
-- Flask 3.0.3 with SocketIO support
-- OpenCV 4.10.0.84 for camera operations
-- Eventlet/Gunicorn for production deployment
+- Flask 3.1.1 - Web framework
+- Flask-SocketIO 5.5.1 - WebSocket support
+- OpenCV 4.12.0.88 - Video processing
+- PyAudio 0.2.14 - Audio capture
+- NumPy 2.2.6 - Array processing
 
-## Configuration
+## Important Notes
 
-- Camera settings: 640x480 resolution, 30 FPS (`app.py:24-26`)
-- Recording format: AVI with XVID codec (`app.py:43`)
-- Static files served from `src/static/`
-- Templates from `src/templates/`
+- Motion service must be stopped to avoid camera conflicts
+- User must be in 'video' group for camera access
+- Audio is opt-in to reduce bandwidth usage
+- Development server warning is suppressed with `allow_unsafe_werkzeug=True`
 
 ## Target Deployment
 
-The application is designed to run on Raspberry Pi 3 B+ with USB webcam, accessible via browser from devices on the same network.
+Designed for Raspberry Pi 3 B+ or newer with USB webcam (tested with Logitech Brio 100).
