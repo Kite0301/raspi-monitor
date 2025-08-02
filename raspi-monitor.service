@@ -1,0 +1,15 @@
+[Unit]
+Description=Raspberry Pi Monitor v1
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/raspi-monitor
+Environment="PATH=/home/pi/raspi-monitor/venv/bin"
+ExecStart=/home/pi/raspi-monitor/venv/bin/python /home/pi/raspi-monitor/audio_video_app.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

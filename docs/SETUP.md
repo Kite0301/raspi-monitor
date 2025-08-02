@@ -107,38 +107,72 @@ python audio_video_app.py
 
 ### 8. 自動起動の設定（オプション）
 
-systemdサービスファイルを作成して自動起動を設定：
+プロジェクトに含まれているsystemdサービスファイルを使用して自動起動を設定できます。
 
 ```bash
-sudo nano /etc/systemd/system/raspi-monitor.service
-```
+# サービスファイルをシステムにコピー
+sudo cp /home/pi/raspi-monitor/raspi-monitor.service /etc/systemd/system/
 
-以下の内容を記入：
-
-```ini
-[Unit]
-Description=Raspberry Pi Monitor v1
-After=network.target
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/home/pi/raspi-monitor
-Environment="PATH=/home/pi/raspi-monitor/venv/bin"
-ExecStart=/home/pi/raspi-monitor/venv/bin/python /home/pi/raspi-monitor/audio_video_app.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-サービスを有効化：
-
-```bash
+# サービスを有効化
 sudo systemctl daemon-reload
 sudo systemctl enable raspi-monitor.service
 sudo systemctl start raspi-monitor.service
+
+# ステータス確認
+sudo systemctl status raspi-monitor.service
 ```
+
+#### サービスの管理コマンド
+
+```bash
+# サービスの停止
+sudo systemctl stop raspi-monitor.service
+
+# サービスの再起動
+sudo systemctl restart raspi-monitor.service
+
+# ログの確認
+sudo journalctl -u raspi-monitor.service -f
+
+# 自動起動の無効化
+sudo systemctl disable raspi-monitor.service
+```
+
+**注意**: サービスファイルは仮想環境のパスが `/home/pi/raspi-monitor/venv` であることを前提としています。異なるパスを使用している場合は、サービスファイルを編集してください。
+
+## 再起動後の手順
+
+### 手動起動の場合
+
+Raspberry Piを再起動した後、以下の手順でアプリケーションを起動します：
+
+```bash
+# SSHでRaspberry Piに接続
+ssh raspi
+
+# プロジェクトディレクトリに移動
+cd /home/pi/raspi-monitor
+
+# 仮想環境をアクティベート
+source venv/bin/activate
+
+# アプリケーションを起動
+python audio_video_app.py
+```
+
+### 自動起動を設定している場合
+
+自動起動サービスが設定されている場合は、再起動後に自動的にアプリケーションが起動します。
+
+```bash
+# サービスの状態確認
+sudo systemctl status raspi-monitor.service
+
+# ログの確認
+sudo journalctl -u raspi-monitor.service -f
+```
+
+ブラウザで `http://[Raspberry PiのIPアドレス]:5000/` にアクセスして動作を確認してください。
 
 ## トラブルシューティング
 

@@ -62,6 +62,7 @@ http://[Raspberry PiのIPアドレス]:5000/
 raspi-monitor/
 ├── audio_video_app.py    # メインアプリケーション
 ├── requirements.txt      # Pythonパッケージ一覧
+├── raspi-monitor.service # systemd自動起動用サービスファイル
 ├── README.md            # このファイル
 ├── docs/
 │   ├── SETUP.md         # 詳細なセットアップガイド
